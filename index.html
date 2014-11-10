@@ -1,0 +1,45 @@
+<!DOCTYPE HTML>
+<html lang="en">
+
+<head>
+  <title>Cylindro Player</title>
+  <meta charset="utf-8">
+  <link href="css/style.css" rel="stylesheet" type="text/css">
+</head>
+
+<body>
+  <div id="info">
+    <h2>Cylindro Player</h2>
+    <ul>
+      <li>Built during 
+        <a href="https://www.hackerleague.org/hackathons/boston-music-hack-day-2014">
+          Music Hack Day Boston 2014</a>
+      </li>
+      <li>Implemented with 
+        <a href="http://developer.echonest.com">The Echo Nest API</a>
+      </li>
+      <li>Source code on 
+        <a href="https://github.com/jchernan/cylindro-player">GitHub</a>
+      </li>
+      <li>Based on the 
+        <a href="http://www.airtightinteractive.com/2013/10/making-audio-reactive-visuals/">
+          Audio Analysis Demo</a> built by 
+        <a href="https://twitter.com/felixturner">@felixturner</a>
+      </li>
+    </ul>
+  </div>
+  <div id="controls"></div>
+  <canvas id="audioDebug" width=330 height=250></canvas>
+
+  <div id="preloader"></div>
+
+  <script src="lib/minivents.min.js"></script>
+  <script src="lib/jquery-2.1.1.min.js"></script>
+  <script src='lib/dat.gui.min.js'></script>
+  <script src="lib/remix.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/audio-handler.js"></script>
+  <script src="js/controls-handler.js"></script>
+</body>
+
+</html>
