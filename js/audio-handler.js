@@ -23,6 +23,7 @@ var AudioHandler = function() {
   var lastFutureSection;
   var minLoudness;
   var maxLoudness;
+  var futureOffset = -5;
 
   // number of pitch keys
   var numberOfKeys = 12;
@@ -38,9 +39,7 @@ var AudioHandler = function() {
   var aveBarWidth = 30;
   var debugSpacing = 2;
 
-  // integration with led_server
   var $;
-  var postUrl = "http://localhost:5000";
 
   function init(jquery) {
     $ = jquery;
@@ -176,18 +175,21 @@ var AudioHandler = function() {
   function startSound() {
     // init position values
     startTime = getTime();
-    lastSegment = 0;
-    lastTatum = 0;
-    lastBeat = 0;
-    lastBar = 0;
-    lastSection = 0;
+    lastSegment = -1;
+    lastTatum = -1;
+    lastBeat = -1;
+    lastBar = -1;
+    lastSection = -1;
     lastFutureSection = 0;
     // create source
     source = audioContext.createBufferSource();
     source.connect(audioContext.destination);
     source.buffer = audioBuffer;
     source.loop = false;
-    source.onended = stopSound;
+    source.onended = function() {
+      ControlsHandler.audioParams.stop = true;
+      stopSound();
+    };
     // start source
     source.start(0);
     isPlayingAudio = true;
@@ -224,17 +226,24 @@ var AudioHandler = function() {
 
   /*
   * Helper method that moves an index in an analysis array
-  * (segments, tatums, beats) given the position on the
-  * current sound playback
+  * (segments, tatums, beats, bars, sections) given the
+  * position on the current sound playback
   */
-  function getValue(last, data) {
-    // start from the last value
-    var offset = ControlsHandler.audioParams.offset;
-    var position = (getTime() - startTime)/1000 + offset;
-    if (last >= data.length || position < data[last].start) {
+  function getValue(last, data, positionOffset) {
+    var next = last + 1;
+    if (next >= data.length || !data[next]) {
+      return -1;
+    }
+    var syncOffset = ControlsHandler.audioParams.offset;
+    var position = (getTime() - startTime)/1000 + syncOffset;
+    var nextPosition = data[next].start;
+    if (positionOffset) {
+      nextPosition = parseFloat(nextPosition) + parseFloat(positionOffset);
+    }
+    if (position < nextPosition) {
       return -1;
     } else {
-      return last + 1;
+      return next;
     }
   }
 
@@ -246,8 +255,9 @@ var AudioHandler = function() {
     var v = getValue(lastSegment, track.analysis.segments)
     if (v != -1) {
       lastSegment = v;
-      var l = normalizeLoudness(track.analysis.segments[v].loudness_max);
-      var p = track.analysis.segments[v].pitches;
+      var segment = track.analysis.segments[v];
+      var l = normalizeLoudness(segment.loudness_max);
+      var p = segment.pitches;
       post('/segments/now', v, l, p);
     }
     return v;
@@ -306,17 +316,13 @@ var AudioHandler = function() {
   }
 
   function getFutureSection() {
-    var data = track.analysis.sections
-    var futureStart = data[lastFutureSection].start;
-    var offset = ControlsHandler.audioParams.offset;
-    var position = (getTime() - startTime)/1000 + offset;
-    if (lastFutureSection >= data.length || position < futureStart - 8) {
-      return -1;
-    } else {
-      lastFutureSection = lastFutureSection + 1;
-      post('/sections/future', lastFutureSection);
-      return lastFutureSection;
+    var v = getValue(lastFutureSection,
+      track.analysis.sections, futureOffset)
+    if (v != -1) {
+      lastFutureSection = v;
+      post('/sections/future', v);
     }
+    return v;
   }
 
   /*
@@ -401,7 +407,7 @@ var AudioHandler = function() {
     $.ajax({
       type: "POST",
       contentType: "application/json",
-      url: postUrl + endpoint,
+      url: ControlsHandler.audioParams.postURL + endpoint,
       data: JSON.stringify(data),
       dataType: "json"
    });

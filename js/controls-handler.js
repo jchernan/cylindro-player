@@ -6,6 +6,7 @@ var ControlsHandler = function() {
     shouldPost: false,
     shouldDraw: true,
     offset: 0.25,
+    postURL: "http://localhost:8888",
     sampleURL: "res/SinGravedad.mp3",
     sampleID: "TRNEHDX1499EFDA675"
   };
@@ -14,17 +15,21 @@ var ControlsHandler = function() {
     // init DAT GUI control panel
     gui = new dat.GUI({autoPlace: false });
     $('#controls').append(gui.domElement);
-    var f2 = gui.addFolder('Settings');
+
     // play/stop toogle
-    f2.add(audioParams, 'stop').listen().onChange(
-      AudioHandler.onTogglePlay).name("Paused");
+    gui.add(audioParams, "stop").listen().onChange(
+      AudioHandler.onTogglePlay).name("Stop");
     // post analysis toogle
-    f2.add(audioParams, 'shouldPost').listen().name("Post");
+    gui.add(audioParams, "shouldPost").name("Post");
     // draw analysis toogle
-    f2.add(audioParams, 'shouldDraw').listen().name("Draw");
+    gui.add(audioParams, "shouldDraw").name("Draw");
     // playback sync offset
-    f2.add(audioParams, 'offset', 0, 1).step(0.01).name("Sync offset");
-    f2.open();
+    gui.add(audioParams, "offset", 0, 1).step(0.01).name("Sync offset");
+    // post url
+    gui.add(audioParams, "postURL").name("Server URL");
+
+    // open DAT GUI
+    gui.open();
     // load sample mp3
     AudioHandler.loadAudio();
   }
