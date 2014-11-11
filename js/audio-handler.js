@@ -2,8 +2,9 @@
 var AudioHandler = function() {
 
   // The Echo Nest API key
-  var apiKey = 'FIO3CQK4FDLIXMKKT';
-  var getProfileUrl = "http://developer.echonest.com/api/v4/track/profile?format=json&bucket=audio_summary"
+  var apiKey = "FIO3CQK4FDLIXMKKT";
+  var apiUrl = "http://developer.echonest.com/api/v4";
+  var profileEndpoint = "/track/profile?format=json&bucket=audio_summary"
 
   // audio variables
   var audioContext;
@@ -91,6 +92,7 @@ var AudioHandler = function() {
 
   function loadAnalysis(trackId, trackUrl, callback) {
     var track;
+    var getProfileUrl = apiUrl + profileEndpoint
     var getProfileParameters = { id: trackId, api_key: apiKey };
     var retryCount = 3;
     var retryInterval = 3000;

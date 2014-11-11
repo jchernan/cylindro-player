@@ -5,9 +5,9 @@ var ControlsHandler = function() {
     stop: false,
     shouldPost: false,
     shouldDraw: true,
-    offset: 0.3,
-    sampleURL: "res/1451_-_D.mp3",
-    sampleID: "TRCYWPQ139279B3308"
+    offset: 0.25,
+    sampleURL: "res/SinGravedad.mp3",
+    sampleID: "TRNEHDX1499EFDA675"
   };
 
   function init(){
