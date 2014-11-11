@@ -3,11 +3,11 @@ var AudioHandler = function() {
 
   // The Echo Nest API key
   var apiKey = 'FIO3CQK4FDLIXMKKT';
+  var getProfileUrl = "http://developer.echonest.com/api/v4/track/profile?format=json&bucket=audio_summary"
 
-  // remix and playback variables
+  // audio variables
   var audioContext;
   var source;
-  var player;
   var track;
   var buffer;
   var audioBuffer;
@@ -46,10 +46,8 @@ var AudioHandler = function() {
     $.ajaxSetup({ cache: false });
     // set up "update" event
     events.on("update", update);
-    // set up remix.js
+    // set up web audio
     audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    remixer = createJRemixer(audioContext, $, apiKey);
-    player = remixer.getPlayer();
     // set up animation canvas
     var canvas = document.getElementById("audioDebug");
     debugCtx = canvas.getContext('2d');
@@ -62,26 +60,24 @@ var AudioHandler = function() {
   }
 
   /*
-  * Load sample MP3
+  * load sample MP3
   */
-  function loadSampleAudio() {
+  function loadAudio() {
     stopSound();
     // get the analysys data
-    remixer.remixTrackById(ControlsHandler.audioParams.sampleID,
-      ControlsHandler.audioParams.sampleURL, function(t, percent) {
+    loadAnalysis(ControlsHandler.audioParams.sampleID,
+      ControlsHandler.audioParams.sampleURL, function(t) {
       track = t;
       if (track.status == 'ok') {
         // get loudness max and min values
         computeLoudnessMaxMin();
-        // remove track reference from objects
-        removeCircularDependencies();
         // load the original audio
         var request = new XMLHttpRequest();
         request.open("GET", ControlsHandler.audioParams.sampleURL, true);
         request.responseType = "arraybuffer";
         request.onload = function() {
           audioContext.decodeAudioData(request.response, function(buffer) {
-            console.log("Audio loaded...");
+            console.log("Audio loaded ...");
             audioBuffer = buffer;
             startSound();
           }, function(e) {
@@ -91,6 +87,48 @@ var AudioHandler = function() {
         request.send();
       }
     });
+  }
+
+  function loadAnalysis(trackId, trackUrl, callback) {
+    var track;
+    var getProfileParameters = { id: trackId, api_key: apiKey };
+    var retryCount = 3;
+    var retryInterval = 3000;
+
+    function lookForAnalysis(trackId, trackUrl, callback) {
+      $.getJSON(getProfileUrl, getProfileParameters, function(data) {
+        var analysisUrl = data.response.track.audio_summary.analysis_url;
+        var getAnalysisParameters = {
+          q: "select * from json where url=\"" + analysisUrl + "\"",
+          format: "json"
+        };
+        track = data.response.track;
+        // this call is proxied through the yahoo query engine.
+        $.getJSON("http://query.yahooapis.com/v1/public/yql",
+          getAnalysisParameters, function(data) {
+            if (data.query.results != null) {
+              console.log("Analysis obtained ...");
+              track.analysis = data.query.results.json;
+              track.status = "ok";
+              callback(track);
+            } else {
+              retryCount = retryCount - 1;
+              retryInterval = retryInterval + retryInterval;
+              if (retryCount > 0) {
+                console.log("Analysis pending, trying again ...")
+                setTimeout(function () {
+                    lookForAnalysis(trackId, trackUrl, callback);
+                }, retryInterval);
+              } else {
+                console.log("Analysis not found ...");
+                callback(track);
+              }
+            }
+          }); // end get analysis
+      }); // end get profile
+    } // end lookForAnalysis
+
+    lookForAnalysis(trackId, trackUrl, callback);
   }
 
   /*
@@ -152,7 +190,7 @@ var AudioHandler = function() {
     source.start(0);
     isPlayingAudio = true;
     $("#preloader").hide();
-    console.log("Audio started...");
+    console.log("Audio started ...");
   }
 
   /*
@@ -165,7 +203,7 @@ var AudioHandler = function() {
       source.disconnect();
     }
     debugCtx.clearRect(0, 0, debugW, debugH);
-    console.log("Audio stopped...");
+    console.log("Audio stopped ...");
   }
 
   /*
@@ -337,63 +375,10 @@ var AudioHandler = function() {
   }
 
   /*
-  * Returns the current remix track
+  * Returns the current track
   */
   function getTrack() {
     return track;
-  }
-
-  /*
-  * Removes circular dependecies in the analysis object
-  */
-  function removeCircularDependencies() {
-    removeProperties(track.analysis);
-    removeProperties(track.analysis.segments);
-    removeProperties(track.analysis.fsegments);
-    removeProperties(track.analysis.tatums);
-    removeProperties(track.analysis.beats);
-    removeProperties(track.analysis.bars);
-    removeProperties(track.analysis.sections);
-  }
-
-  /*
-  * Removes properties from an object or list of objects.
-  * Used to clean up circular dependecies in the analysis object.
-  */
-  function removeProperties(obj) {
-    if (obj instanceof Array) {
-      for (var i=0; i < obj.length; i++) {
-        removeObjectProperties(obj[i]);
-      }
-    } else {
-      removeObjectProperties(obj);
-    }
-  }
-
-  /*
-  * Properties that create circular dependencies
-  * in the analysis object
-  */
-  var badProperties = [
-    "track",
-    "parent",
-    "children",
-    "next",
-    "prev",
-    "overlappingSegments",
-    "oseg"
-  ];
-
-  /*
-  * Removes properties from an object
-  */
-  function removeObjectProperties(obj) {
-    for (var i=0; i < badProperties.length; i++) {
-      var property = badProperties[i];
-      if (obj.hasOwnProperty(property)) {
-        obj[property] = null;
-      }
-    }
   }
 
   /*
@@ -421,7 +406,7 @@ var AudioHandler = function() {
   }
 
   return {
-    loadSampleAudio: loadSampleAudio,
+    loadAudio: loadAudio,
     update: update,
     init: init,
     onTogglePlay: onTogglePlay,

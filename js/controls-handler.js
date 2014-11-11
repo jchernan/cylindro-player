@@ -26,7 +26,7 @@ var ControlsHandler = function() {
     f2.add(audioParams, 'offset', 0, 1).step(0.01).name("Sync offset");
     f2.open();
     // load sample mp3
-    AudioHandler.loadSampleAudio();
+    AudioHandler.loadAudio();
   }
 
   return {
